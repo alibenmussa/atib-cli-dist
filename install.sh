@@ -40,6 +40,7 @@ fi
 ok "Google Chrome"
 
 # --- uv (and through it, Python) ------------------------------------------------------------------------
+before="$PATH"                               # the PATH new Terminal windows get, as it is before this script
 export PATH="$HOME/.local/bin:$PATH"
 if ! command -v uv >/dev/null 2>&1; then
     say "Installing uv (it brings its own Python)..."
@@ -50,7 +51,13 @@ command -v uv >/dev/null 2>&1 || fail "uv is not on PATH after installing it."
 ok "uv $(uv --version | awk '{print $2}')"
 
 # --- the `atib` command on your PATH, for new Terminal windows ------------------------------------------------
-[ -n "${ATIB_NO_PATH:-}" ] || uv tool update-shell >/dev/null 2>&1 || true      # (tests leave your shell alone)
+add_to_path() {
+    case ":$before:" in *":$HOME/.local/bin:"*) return 0 ;; esac          # new windows have it already
+    case "${SHELL:-/bin/zsh}" in */bash) rc="$HOME/.bash_profile" ;; *) rc="$HOME/.zshrc" ;; esac
+    grep -qs '\.local/bin' "$rc" && return 0                              # written before
+    printf '\n# ATIB CLI: the atib and uv commands are in ~/.local/bin\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$rc"
+}
+[ -n "${ATIB_NO_PATH:-}" ] || add_to_path || say "Add ~/.local/bin to your PATH to use atib in new windows."
 
 # --- ATIB CLI -------------------------------------------------------------------------------------------
 work="$(mktemp -d)"
