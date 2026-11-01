@@ -49,6 +49,9 @@ fi
 command -v uv >/dev/null 2>&1 || fail "uv is not on PATH after installing it."
 ok "uv $(uv --version | awk '{print $2}')"
 
+# --- the `atib` command on your PATH, for new Terminal windows ------------------------------------------------
+[ -n "${ATIB_NO_PATH:-}" ] || uv tool update-shell >/dev/null 2>&1 || true      # (tests leave your shell alone)
+
 # --- ATIB CLI -------------------------------------------------------------------------------------------
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -64,13 +67,16 @@ fi
 curl -fsSL "$files/constraints.txt" -o "$work/constraints.txt" || fail "Version $version is not published."
 curl -fsSL "$files/atib_cli-$version-py3-none-any.whl" -o "$work/atib_cli-$version-py3-none-any.whl" \
     || fail "Version $version is not published."
-say "Installing ATIB CLI $version..."
-uv tool install --force --quiet --python 3.13 --constraints "$work/constraints.txt" \
-    "$work/atib_cli-$version-py3-none-any.whl" || fail "ATIB CLI did not install."
+# what can take long on a slow connection is shown as it goes: Python first, then the packages
+say "Getting Python 3.13 (about 20 MB)..."
+uv python install 3.13 || fail "Python did not download. Check the internet connection and run this again."
+ok "Python 3.13"
+say "Getting ATIB CLI $version and what it needs (about 60 MB: a few minutes on a slow connection)..."
+uv tool install --force --python 3.13 --constraints "$work/constraints.txt" \
+    "$work/atib_cli-$version-py3-none-any.whl" \
+    || fail "ATIB CLI did not install. Run this again: what was downloaded is kept, so it goes faster."
 ok "ATIB CLI $version"
 
-# --- the command on your PATH, for new Terminal windows ---------------------------------------------------
-[ -n "${ATIB_NO_PATH:-}" ] || uv tool update-shell >/dev/null 2>&1 || true      # (tests leave your shell alone)
 printf '\n'
 say "Done. Open a new Terminal window and type:  atib"
 say "(or, in this one:  export PATH=\"\$HOME/.local/bin:\$PATH\" && atib)"
