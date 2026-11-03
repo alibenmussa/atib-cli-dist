@@ -27,17 +27,52 @@ macos="$(sw_vers -productVersion)"
 [ "${macos%%.*}" -ge 12 ] || fail "macOS 12 or later is needed (this Mac has $macos)."
 ok "macOS $macos ($(uname -m))"
 
-chrome=""
-for app in "/Applications/Google Chrome.app" "$HOME/Applications/Google Chrome.app"; do
-    [ -d "$app" ] && chrome="$app" && break
-done
-if [ -z "$chrome" ]; then
-    say "ATIB CLI drives your own Google Chrome, in the background. Install it, then run this again:"
-    say "https://www.google.com/chrome/"
-    open "https://www.google.com/chrome/" 2>/dev/null || true
-    exit 1
-fi
-ok "Google Chrome"
+# Google Chrome by its bundle id, wherever it is (the CLI looks the same way, atibcli/browser.py): "Google
+# Chrome.app" in the folders given first, then another Chrome there ("Google Chrome 2.app", Beta...), then
+# anywhere Spotlight knows of it (left in Downloads, renamed). Prints the app, "image:<app>" when the only one is
+# still on the disk image it came on (it goes away when that is ejected), or nothing.
+find_chrome() {
+    local ids=" com.google.Chrome com.google.Chrome.beta com.google.Chrome.dev com.google.Chrome.canary "
+    local folder app id exe image="" query="" volumes="${ATIB_VOLUMES_ROOT:-/Volumes}"   # (tests: elsewhere)
+    is_chrome() {
+        id="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$1/Contents/Info.plist" 2>/dev/null)" || return 1
+        case "$ids" in *" $id "*) ;; *) return 1 ;; esac
+        exe="$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$1/Contents/Info.plist" 2>/dev/null)" || return 1
+        [ -x "$1/Contents/MacOS/$exe" ]
+    }
+    for folder in "$@"; do
+        for app in "$folder/Google Chrome.app" "$folder"/Google\ Chrome*.app; do
+            if [ -d "$app" ] && is_chrome "$app"; then printf '%s\n' "$app"; return 0; fi
+        done
+    done
+    for id in $ids; do query="${query:+$query || }kMDItemCFBundleIdentifier == \"$id\""; done
+    while IFS= read -r app; do
+        if [ -z "$app" ] || [ ! -d "$app" ] || ! is_chrome "$app"; then continue; fi
+        case "$app" in
+            "$volumes"/*) [ -n "$image" ] || image="$app" ;;
+            *) printf '%s\n' "$app"; return 0 ;;
+        esac
+    done < <(mdfind "$query" 2>/dev/null || true)
+    if [ -n "$image" ]; then printf 'image:%s\n' "$image"; fi
+    return 0
+}
+
+chrome="$(find_chrome "/Applications" "$HOME/Applications")"
+case "$chrome" in
+    "")
+        say "ATIB CLI drives your own Google Chrome, in the background, and could not find it."
+        say "Installed already? Drag Google Chrome into Applications (Finder), then run this again."
+        say "Not yet? Install it from https://www.google.com/chrome/ and run this again."
+        open "https://www.google.com/chrome/" 2>/dev/null || true
+        exit 1 ;;
+    image:*)
+        say "Google Chrome is still on the disk image it came on (${chrome#image:})."
+        say "Drag it into Applications (Finder), eject the image, then run this again."
+        open /Applications 2>/dev/null || true
+        exit 1 ;;
+    /Applications/*|"$HOME"/Applications/*) ok "Google Chrome" ;;
+    *) ok "Google Chrome ($chrome)" ;;
+esac
 
 # --- uv (and through it, Python) ------------------------------------------------------------------------
 before="$PATH"                               # the PATH new Terminal windows get, as it is before this script

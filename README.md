@@ -11,7 +11,7 @@ Not made or supported by ATIB: it drives ATIB Online's own website in your own G
 
 ## Install
 
-You need macOS 12 or later and [Google Chrome](https://www.google.com/chrome/). Open Terminal and paste:
+You need macOS 12 or later and [Google Chrome](https://www.google.com/chrome/), dragged into Applications (not opened from the disk image it downloads as). Open Terminal and paste:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/alibenmussa/atib-cli-dist/main/install.sh | bash
