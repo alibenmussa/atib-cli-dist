@@ -4,7 +4,8 @@ ATIB Online web banking in your Mac's Terminal: balances, transactions, cards an
 beneficiaries, transfers (ATIB and LYPAY) and prepaid vouchers. It reads; a transfer, a new beneficiary, a voucher
 or a card block goes through the bank's own review page and is sent only after you confirm it, with the bank's
 code. Optional apps: your transactions recorded in Wallet App by BudgetBakers, and daily, weekly and monthly
-summaries from a Telegram bot of yours.
+summaries from a Telegram bot of yours, which can also answer `/balance` and `/last` while your Mac is awake.
+`atib balance` shows your balances in Terminal.
 
 Not made or supported by ATIB: it drives ATIB Online's own website in your own Google Chrome, the way you would.
 
